@@ -133,9 +133,8 @@ export default class WalletAccountEvmFacilitator {
    * @param {VerifyTypedDataArgs} args - The verification arguments.
    * @returns {Promise<boolean>}
    */
-  async verifyTypedData ({ address, domain, types, primaryType, message, signature }) {
-    const { [primaryType]: _, ...typesWithoutPrimary } = types
-    const recovered = verifyTypedData(domain, typesWithoutPrimary, message, signature)
+  async verifyTypedData ({ address, domain, types, message, signature }) {
+    const recovered = verifyTypedData(domain, types, message, signature)
     return recovered.toLowerCase() === address.toLowerCase()
   }
 
