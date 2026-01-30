@@ -13,13 +13,13 @@
 // limitations under the License.
 'use strict'
 
-/** @typedef {import('./src/facilitator-evm-signer-adapter.js').ReadContractArgs} ReadContractArgs */
-/** @typedef {import('./src/facilitator-evm-signer-adapter.js').VerifyTypedDataArgs} VerifyTypedDataArgs */
-/** @typedef {import('./src/facilitator-evm-signer-adapter.js').WriteContractArgs} WriteContractArgs */
-/** @typedef {import('./src/facilitator-evm-signer-adapter.js').SendTransactionArgs} SendTransactionArgs */
-/** @typedef {import('./src/facilitator-evm-signer-adapter.js').WaitForTransactionReceiptArgs} WaitForTransactionReceiptArgs */
-/** @typedef {import('./src/facilitator-evm-signer-adapter.js').GetCodeArgs} GetCodeArgs */
-/** @typedef {import('./src/facilitator-evm-signer-adapter.js').TransactionReceiptResult} TransactionReceiptResult */
-/** @typedef {import('./src/facilitator-evm-signer-adapter.js').FacilitatorEvmSigner} FacilitatorEvmSigner */
+/** @typedef {import('./src/wallet-account-evm-facilitator.js').ReadContractArgs} ReadContractArgs */
+/** @typedef {import('./src/wallet-account-evm-facilitator.js').VerifyTypedDataArgs} VerifyTypedDataArgs */
+/** @typedef {import('./src/wallet-account-evm-facilitator.js').WriteContractArgs} WriteContractArgs */
+/** @typedef {import('./src/wallet-account-evm-facilitator.js').SendTransactionArgs} SendTransactionArgs */
+/** @typedef {import('./src/wallet-account-evm-facilitator.js').WaitForTransactionReceiptArgs} WaitForTransactionReceiptArgs */
+/** @typedef {import('./src/wallet-account-evm-facilitator.js').GetCodeArgs} GetCodeArgs */
+/** @typedef {import('./src/wallet-account-evm-facilitator.js').TransactionReceiptResult} TransactionReceiptResult */
+/** @typedef {import('./src/wallet-account-evm-facilitator.js').FacilitatorEvmSigner} FacilitatorEvmSigner */
 
-export { default as FacilitatorEvmSignerAdapter } from './src/facilitator-evm-signer-adapter.js'
+export { default as WalletAccountEvmFacilitator } from './src/wallet-account-evm-facilitator.js'

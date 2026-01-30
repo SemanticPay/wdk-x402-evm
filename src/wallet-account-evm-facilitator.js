@@ -14,11 +14,9 @@
 
 'use strict'
 
-import { Contract, verifyTypedData as ethersVerifyTypedData } from 'ethers'
+import { Contract, verifyTypedData } from 'ethers'
 
-import { WalletAccountEvm } from '@tetherto/wdk-wallet-evm'
-
-/** @typedef {import('@tetherto/wdk-wallet-evm').EvmWalletConfig} EvmWalletConfig */
+/** @typedef {import('@tetherto/wdk-wallet-evm').default} WalletAccountEvm */
 
 /**
  * @typedef {Object} ReadContractArgs
@@ -79,35 +77,43 @@ import { WalletAccountEvm } from '@tetherto/wdk-wallet-evm'
  */
 
 /**
- * Adapter that extends WalletAccountEvm to conform to the FacilitatorEvmSigner
- * interface required by x402 facilitators.
+ * Object adapter that wraps a WalletAccountEvm instance to conform to the
+ * FacilitatorEvmSigner interface required by x402 facilitators.
  *
  * Translates the WalletAccountEvm API (ethers.js based) into the
  * FacilitatorEvmSigner interface used by x402 for verifying and settling payments.
  *
- * @extends WalletAccountEvm
  * @implements {FacilitatorEvmSigner}
  */
-export default class FacilitatorEvmSignerAdapter extends WalletAccountEvm {
+export default class WalletAccountEvmFacilitator {
   /**
    * Creates a new facilitator EVM signer adapter.
    *
-   * @param {string | Uint8Array} seed - The wallet's BIP-39 seed phrase.
-   * @param {string} path - The BIP-44 derivation path (e.g. "0'/0/0").
-   * @param {EvmWalletConfig} [config] - The configuration object.
+   * @param {WalletAccountEvm} walletAccount - The WalletAccountEvm instance to adapt.
    */
-  constructor (seed, path, config = {}) {
-    super(seed, path, config)
+  constructor (walletAccount) {
+    /** @type {WalletAccountEvm} */
+    this.adaptee = walletAccount
   }
 
   /**
    * Get all addresses this facilitator can use for signing.
-   * Enables dynamic address selection for load balancing and key rotation.
    *
    * @returns {string[]}
    */
   getAddresses () {
-    return [this._account.address]
+    return [this.adaptee._address]
+  }
+
+  /**
+   * Get the bytecode at a given address.
+   *
+   * @param {GetCodeArgs} args - The address arguments.
+   * @returns {Promise<string | undefined>}
+   */
+  async getCode ({ address }) {
+    const code = await this.adaptee._provider.getCode(address)
+    return code === '0x' ? undefined : code
   }
 
   /**
@@ -116,15 +122,9 @@ export default class FacilitatorEvmSignerAdapter extends WalletAccountEvm {
    * @param {ReadContractArgs} args - The contract read arguments.
    * @returns {Promise<unknown>}
    */
-  async readContract (args) {
-    if (!this._provider) {
-      throw new Error('The wallet must be connected to a provider to read contracts.')
-    }
-
-    const { address, abi, functionName, args: fnArgs = [] } = args
-    const contract = new Contract(address, abi, this._provider)
-
-    return await contract[functionName](...fnArgs)
+  async readContract ({ address, abi, functionName, args = [] }) {
+    const contract = new Contract(address, abi, this.adaptee._provider)
+    return contract[functionName](...args)
   }
 
   /**
@@ -133,20 +133,10 @@ export default class FacilitatorEvmSignerAdapter extends WalletAccountEvm {
    * @param {VerifyTypedDataArgs} args - The verification arguments.
    * @returns {Promise<boolean>}
    */
-  async verifyTypedData (args) {
-    const { address, domain, types, message, signature } = args
-
-    const typesWithoutEIP712Domain = { ...types }
-    delete typesWithoutEIP712Domain.EIP712Domain
-
-    const recoveredAddress = ethersVerifyTypedData(
-      domain,
-      typesWithoutEIP712Domain,
-      message,
-      signature
-    )
-
-    return recoveredAddress.toLowerCase() === address.toLowerCase()
+  async verifyTypedData ({ address, domain, types, primaryType, message, signature }) {
+    const { [primaryType]: _, ...typesWithoutPrimary } = types
+    const recovered = verifyTypedData(domain, typesWithoutPrimary, message, signature)
+    return recovered.toLowerCase() === address.toLowerCase()
   }
 
   /**
@@ -155,15 +145,9 @@ export default class FacilitatorEvmSignerAdapter extends WalletAccountEvm {
    * @param {WriteContractArgs} args - The contract write arguments.
    * @returns {Promise<string>} The transaction hash.
    */
-  async writeContract (args) {
-    if (!this._account.provider) {
-      throw new Error('The wallet must be connected to a provider to write contracts.')
-    }
-
-    const { address, abi, functionName, args: fnArgs } = args
-    const contract = new Contract(address, abi, this._account)
-    const tx = await contract[functionName](...fnArgs)
-
+  async writeContract ({ address, abi, functionName, args }) {
+    const contract = new Contract(address, abi, this.adaptee._account)
+    const tx = await contract[functionName](...args)
     return tx.hash
   }
 
@@ -173,15 +157,9 @@ export default class FacilitatorEvmSignerAdapter extends WalletAccountEvm {
    * @param {SendTransactionArgs} args - The transaction arguments.
    * @returns {Promise<string>} The transaction hash.
    */
-  async sendTransaction (args) {
-    if (!this._account.provider) {
-      throw new Error('The wallet must be connected to a provider to send transactions.')
-    }
-
-    const { to, data } = args
-    const tx = await this._account.sendTransaction({ to, data })
-
-    return tx.hash
+  async sendTransaction ({ to, data }) {
+    const { hash } = await this.adaptee.sendTransaction({ to, value: 0, data })
+    return hash
   }
 
   /**
@@ -190,33 +168,8 @@ export default class FacilitatorEvmSignerAdapter extends WalletAccountEvm {
    * @param {WaitForTransactionReceiptArgs} args - The receipt arguments.
    * @returns {Promise<TransactionReceiptResult>}
    */
-  async waitForTransactionReceipt (args) {
-    if (!this._provider) {
-      throw new Error('The wallet must be connected to a provider to wait for transaction receipts.')
-    }
-
-    const { hash } = args
-    const receipt = await this._provider.waitForTransaction(hash)
-
+  async waitForTransactionReceipt ({ hash }) {
+    const receipt = await this.adaptee._provider.waitForTransaction(hash)
     return { status: receipt.status === 1 ? 'success' : 'reverted' }
-  }
-
-  /**
-   * Get the bytecode at a given address.
-   *
-   * @param {GetCodeArgs} args - The address arguments.
-   * @returns {Promise<string | undefined>}
-   */
-  async getCode (args) {
-    if (!this._provider) {
-      throw new Error('The wallet must be connected to a provider to get contract code.')
-    }
-
-    const { address } = args
-    const code = await this._provider.getCode(address)
-
-    if (code === '0x') return undefined
-
-    return code
   }
 }
