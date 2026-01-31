@@ -9,4 +9,4 @@
 /** @typedef {import('./src/wallet-account-evm-x402-facilitator.js').TransactionReceiptResult} TransactionReceiptResult */
 /** @typedef {import('@x402/evm').FacilitatorEvmSigner} FacilitatorEvmSigner */
 
-export { default, default as WalletAccountEvmX402Facilitator } from './src/wallet-account-evm-x402-facilitator.js'
+export { default } from './src/wallet-account-evm-x402-facilitator.js'
