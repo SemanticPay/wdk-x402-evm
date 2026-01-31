@@ -1,6 +1,46 @@
 /** @typedef {import('@tetherto/wdk-wallet-evm').default} WalletAccountEvm */
 /** @typedef {import('@x402/evm').FacilitatorEvmSigner} FacilitatorEvmSigner */
 /**
+ * @typedef {Object} ReadContractArgs
+ * @property {string} address - The contract address.
+ * @property {readonly unknown[]} abi - The contract ABI.
+ * @property {string} functionName - The function to call.
+ * @property {readonly unknown[]} [args] - The function arguments.
+ */
+/**
+ * @typedef {Object} VerifyTypedDataArgs
+ * @property {string} address - The address that allegedly signed the data.
+ * @property {Record<string, unknown>} domain - The EIP-712 domain.
+ * @property {Record<string, unknown>} types - The EIP-712 types.
+ * @property {string} primaryType - The primary type being signed.
+ * @property {Record<string, unknown>} message - The structured message that was signed.
+ * @property {string} signature - The hex-encoded signature.
+ */
+/**
+ * @typedef {Object} WriteContractArgs
+ * @property {string} address - The contract address.
+ * @property {readonly unknown[]} abi - The contract ABI.
+ * @property {string} functionName - The function to call.
+ * @property {readonly unknown[]} args - The function arguments.
+ */
+/**
+ * @typedef {Object} SendTransactionArgs
+ * @property {string} to - The recipient address.
+ * @property {string} data - The transaction data in hex format.
+ */
+/**
+ * @typedef {Object} WaitForTransactionReceiptArgs
+ * @property {string} hash - The transaction hash.
+ */
+/**
+ * @typedef {Object} GetCodeArgs
+ * @property {string} address - The address to get the bytecode for.
+ */
+/**
+ * @typedef {Object} TransactionReceiptResult
+ * @property {string} status - The transaction status ('success' or 'reverted').
+ */
+/**
  * Object adapter that wraps a WalletAccountEvm instance to conform to the
  * FacilitatorEvmSigner interface required by x402 facilitators.
  *
@@ -69,3 +109,93 @@ export default class WalletAccountEvmX402Facilitator implements FacilitatorEvmSi
 }
 export type WalletAccountEvm = import("@tetherto/wdk-wallet-evm").default;
 export type FacilitatorEvmSigner = import("@x402/evm").FacilitatorEvmSigner;
+export type ReadContractArgs = {
+    /**
+     * - The contract address.
+     */
+    address: string;
+    /**
+     * - The contract ABI.
+     */
+    abi: readonly unknown[];
+    /**
+     * - The function to call.
+     */
+    functionName: string;
+    /**
+     * - The function arguments.
+     */
+    args?: readonly unknown[];
+};
+export type VerifyTypedDataArgs = {
+    /**
+     * - The address that allegedly signed the data.
+     */
+    address: string;
+    /**
+     * - The EIP-712 domain.
+     */
+    domain: Record<string, unknown>;
+    /**
+     * - The EIP-712 types.
+     */
+    types: Record<string, unknown>;
+    /**
+     * - The primary type being signed.
+     */
+    primaryType: string;
+    /**
+     * - The structured message that was signed.
+     */
+    message: Record<string, unknown>;
+    /**
+     * - The hex-encoded signature.
+     */
+    signature: string;
+};
+export type WriteContractArgs = {
+    /**
+     * - The contract address.
+     */
+    address: string;
+    /**
+     * - The contract ABI.
+     */
+    abi: readonly unknown[];
+    /**
+     * - The function to call.
+     */
+    functionName: string;
+    /**
+     * - The function arguments.
+     */
+    args: readonly unknown[];
+};
+export type SendTransactionArgs = {
+    /**
+     * - The recipient address.
+     */
+    to: string;
+    /**
+     * - The transaction data in hex format.
+     */
+    data: string;
+};
+export type WaitForTransactionReceiptArgs = {
+    /**
+     * - The transaction hash.
+     */
+    hash: string;
+};
+export type GetCodeArgs = {
+    /**
+     * - The address to get the bytecode for.
+     */
+    address: string;
+};
+export type TransactionReceiptResult = {
+    /**
+     * - The transaction status ('success' or 'reverted').
+     */
+    status: string;
+};

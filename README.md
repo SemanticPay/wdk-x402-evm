@@ -341,15 +341,3 @@ npm test
 # Run tests with coverage
 npm run test:coverage
 ```
-
-## License
-
-This project is licensed under the Apache License 2.0 - see the LICENSE file for details.
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## Support
-
-For support, please open an issue on the GitHub repository.
