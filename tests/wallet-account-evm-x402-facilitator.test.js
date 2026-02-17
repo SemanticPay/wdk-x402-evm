@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, jest, test } from '@jest/globals'
-
-import { WalletAccountEvmX402Facilitator } from '../index.js'
+import WalletAccountEvmX402Facilitator from '../index.js'
 
 const ADDRESS = '0x405005C7c4422390F4B334F64Cf20E0b767131d0'
+const PAYER_ADDRESS = '0x2Dd68bc0e919931fAA1e4233EC4a9c2B7e1e784C'
 const CONTRACT_ADDRESS = '0xa460AEbce0d3A4BecAd8ccf9D6D4861296c503Bd'
 const TX_HASH = '0xe60970cd7685466037bac1ff337e08265ac9f48af70a12529bdca5caf5a2b14b'
 
@@ -14,11 +14,17 @@ function createMockAdaptee (overrides = {}) {
       waitForTransaction: jest.fn()
     },
     _account: {},
-    verifyTypedData: jest.fn(),
     sendTransaction: jest.fn(),
     ...overrides
   }
 }
+
+// Mock ethers.verifyTypedData at the module level
+let mockRecoveredAddress = PAYER_ADDRESS
+jest.unstable_mockModule('ethers', () => ({
+  Contract: jest.fn().mockImplementation(() => ({})),
+  verifyTypedData: jest.fn().mockImplementation(() => mockRecoveredAddress)
+}))
 
 describe('WalletAccountEvmX402Facilitator', () => {
   let adaptee, facilitator
@@ -26,6 +32,7 @@ describe('WalletAccountEvmX402Facilitator', () => {
   beforeEach(() => {
     adaptee = createMockAdaptee()
     facilitator = new WalletAccountEvmX402Facilitator(adaptee)
+    mockRecoveredAddress = PAYER_ADDRESS
   })
 
   describe('constructor', () => {
@@ -37,7 +44,6 @@ describe('WalletAccountEvmX402Facilitator', () => {
   describe('getAddresses', () => {
     test('should return an array containing the adaptee address', () => {
       const addresses = facilitator.getAddresses()
-
       expect(addresses).toEqual([ADDRESS])
     })
   })
@@ -62,44 +68,88 @@ describe('WalletAccountEvmX402Facilitator', () => {
     })
   })
 
-  describe('verifyTypedData', () => {
-    const DOMAIN = { name: 'Test', version: '1', chainId: 1 }
-    const TYPES = { Message: [{ name: 'content', type: 'string' }] }
-    const MESSAGE = { content: 'hello' }
+describe('verifyTypedData', () => {
+    const DOMAIN = { name: 'USDT0', version: '1', chainId: 9745, verifyingContract: CONTRACT_ADDRESS }
+    const TYPES = { TransferWithAuthorization: [{ name: 'from', type: 'address' }] }
+    const MESSAGE = { from: PAYER_ADDRESS }
     const SIGNATURE = '0xdeadbeef'
 
-    test('should delegate to the adaptee verifyTypedData', async () => {
-      adaptee.verifyTypedData.mockResolvedValue(true)
+    test('should return the recovered address when signature is valid', async () => {
+      mockRecoveredAddress = PAYER_ADDRESS
 
       const result = await facilitator.verifyTypedData({
-        address: ADDRESS,
+        address: PAYER_ADDRESS,
         domain: DOMAIN,
         types: TYPES,
-        primaryType: 'Message',
+        primaryType: 'TransferWithAuthorization',
         message: MESSAGE,
         signature: SIGNATURE
       })
 
-      expect(result).toBe(true)
-      expect(adaptee.verifyTypedData).toHaveBeenCalledWith(
-        { domain: DOMAIN, types: TYPES, message: MESSAGE },
-        SIGNATURE
-      )
+      expect(result).toBe(PAYER_ADDRESS)
     })
 
-    test('should return false when the adaptee returns false', async () => {
-      adaptee.verifyTypedData.mockResolvedValue(false)
+    test('should return a mismatched address when signature was signed by someone else', async () => {
+      mockRecoveredAddress = '0x0000000000000000000000000000000000000001'
 
       const result = await facilitator.verifyTypedData({
-        address: ADDRESS,
+        address: PAYER_ADDRESS,
         domain: DOMAIN,
         types: TYPES,
-        primaryType: 'Message',
+        primaryType: 'TransferWithAuthorization',
         message: MESSAGE,
         signature: SIGNATURE
       })
 
-      expect(result).toBe(false)
+      expect(result).toBe('0x0000000000000000000000000000000000000001')
+      expect(result).not.toBe(PAYER_ADDRESS)
+    })
+
+    test('should return the recovered address as-is without case normalization', async () => {
+      mockRecoveredAddress = PAYER_ADDRESS.toLowerCase()
+
+      const result = await facilitator.verifyTypedData({
+        address: PAYER_ADDRESS,
+        domain: DOMAIN,
+        types: TYPES,
+        primaryType: 'TransferWithAuthorization',
+        message: MESSAGE,
+        signature: SIGNATURE
+      })
+
+      expect(result).toBe(PAYER_ADDRESS.toLowerCase())
+    })
+
+    test('should return the payer address even when payer differs from facilitator', async () => {
+      expect(PAYER_ADDRESS).not.toBe(ADDRESS)
+      mockRecoveredAddress = PAYER_ADDRESS
+
+      const result = await facilitator.verifyTypedData({
+        address: PAYER_ADDRESS,
+        domain: DOMAIN,
+        types: TYPES,
+        primaryType: 'TransferWithAuthorization',
+        message: MESSAGE,
+        signature: SIGNATURE
+      })
+
+      expect(result).toBe(PAYER_ADDRESS)
+    })
+
+    test('should not use the adaptee verifyTypedData method', async () => {
+      adaptee.verifyTypedData = jest.fn()
+      mockRecoveredAddress = PAYER_ADDRESS
+
+      await facilitator.verifyTypedData({
+        address: PAYER_ADDRESS,
+        domain: DOMAIN,
+        types: TYPES,
+        primaryType: 'TransferWithAuthorization',
+        message: MESSAGE,
+        signature: SIGNATURE
+      })
+
+      expect(adaptee.verifyTypedData).not.toHaveBeenCalled()
     })
   })
 

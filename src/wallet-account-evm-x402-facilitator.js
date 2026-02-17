@@ -110,7 +110,8 @@ export default class WalletAccountEvmX402Facilitator {
    * @returns {Promise<boolean>}
    */
   async verifyTypedData ({ domain, types, message, signature }) {
-    return await this._adaptee.verifyTypedData({ domain, types, message }, signature)
+    const { verifyTypedData } = await import('ethers')
+    return verifyTypedData(domain, types, message, signature)
   }
 
   /**
